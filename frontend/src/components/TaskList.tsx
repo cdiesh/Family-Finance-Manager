@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { Calendar } from './Calendar';
+import { CustomDatePicker } from './CustomDatePicker';
 
 interface Task {
     id: number;
@@ -16,13 +17,14 @@ export const TaskList = () => {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [newTaskTitle, setNewTaskTitle] = useState('');
     const [newTaskGroup, setNewTaskGroup] = useState(''); // Allow typing
-    const [newTaskDate, setNewTaskDate] = useState('');
+    const [newTaskDate, setNewTaskDate] = useState<Date | null>(null);
     const [isAdding, setIsAdding] = useState(false);
 
     // Edit State
     const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
     const [editTitle, setEditTitle] = useState('');
     const [editGroup, setEditGroup] = useState('');
+    const [editDate, setEditDate] = useState<Date | null>(null);
 
     const loadTasks = async () => {
         try {
@@ -42,11 +44,11 @@ export const TaskList = () => {
         await api.createTask({
             title: newTaskTitle,
             group: newTaskGroup || 'General',
-            due_date: newTaskDate ? new Date(newTaskDate).toISOString() : undefined
+            due_date: newTaskDate ? newTaskDate.toISOString() : undefined
         });
         setNewTaskTitle('');
         setNewTaskGroup('');
-        setNewTaskDate('');
+        setNewTaskDate(null);
         setIsAdding(false);
         loadTasks();
     };
@@ -61,16 +63,22 @@ export const TaskList = () => {
         setEditingTaskId(task.id);
         setEditTitle(task.title);
         setEditGroup(task.group);
+        setEditDate(task.due_date ? new Date(task.due_date) : null);
     };
 
     const cancelEditing = () => {
         setEditingTaskId(null);
         setEditTitle('');
         setEditGroup('');
+        setEditDate(null);
     };
 
     const saveEdit = async (id: number) => {
-        await api.updateTask(id, { title: editTitle, group: editGroup });
+        await api.updateTask(id, {
+            title: editTitle,
+            group: editGroup,
+            due_date: editDate ? editDate.toISOString() : undefined
+        });
         setEditingTaskId(null);
         loadTasks();
     };
@@ -99,42 +107,30 @@ export const TaskList = () => {
 
             {/* NEW ITEM FORM */}
             {isAdding && (
-                <form onSubmit={handleAdd} style={{ marginBottom: '2rem', padding: '1.5rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
-                    <h4 style={{ marginBottom: '1rem', color: 'var(--text-secondary)' }}>CREATE NEW TASK</h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '1rem', alignItems: 'end' }}>
+                <form onSubmit={handleAdd} className="task-creation-card">
+                    <h4 style={{ marginBottom: '1.5rem', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.75rem' }}>
+                        CREATE NEW TASK
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1.5fr auto', gap: '1rem', alignItems: 'end' }}>
                         <div>
-                            <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>DESCRIPTION</label>
+                            <label className="form-label">DESCRIPTION</label>
                             <input
                                 value={newTaskTitle}
                                 onChange={(e) => setNewTaskTitle(e.target.value)}
                                 placeholder="What needs doing?"
-                                style={{
-                                    width: '100%',
-                                    background: 'var(--bg-primary)',
-                                    border: '1px solid var(--border-subtle)',
-                                    padding: '0.75rem',
-                                    color: 'var(--text-primary)',
-                                    borderRadius: '4px'
-                                }}
+                                className="input-premium"
                                 autoFocus
                             />
                         </div>
 
                         <div>
-                            <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>CATEGORY (Type or Select)</label>
+                            <label className="form-label">CATEGORY</label>
                             <input
                                 list="group-suggestions"
                                 value={newTaskGroup}
                                 onChange={(e) => setNewTaskGroup(e.target.value)}
-                                placeholder="General"
-                                style={{
-                                    width: '100%',
-                                    background: 'var(--bg-primary)',
-                                    border: '1px solid var(--border-subtle)',
-                                    padding: '0.75rem',
-                                    color: 'var(--text-primary)',
-                                    borderRadius: '4px'
-                                }}
+                                placeholder="Select..."
+                                className="input-premium"
                             />
                             <datalist id="group-suggestions">
                                 {existingGroups.map(g => <option key={g} value={g} />)}
@@ -142,24 +138,17 @@ export const TaskList = () => {
                         </div>
 
                         <div>
-                            <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>DUE DATE (Optional)</label>
-                            <input
-                                type="date"
-                                value={newTaskDate}
-                                onChange={(e) => setNewTaskDate(e.target.value)}
-                                style={{
-                                    width: '100%',
-                                    background: 'var(--bg-primary)',
-                                    border: '1px solid var(--border-subtle)',
-                                    padding: '0.75rem',
-                                    color: 'var(--text-primary)',
-                                    borderRadius: '4px',
-                                    colorScheme: 'dark'
-                                }}
+                            <label className="form-label">DUE DATE</label>
+                            <CustomDatePicker
+                                selected={newTaskDate}
+                                onChange={(date) => setNewTaskDate(date)}
+                                placeholder="Select Date & Time"
                             />
                         </div>
 
-                        <button type="submit" className="btn-primary" style={{ height: '42px' }}>SAVE TASK</button>
+                        <button type="submit" className="btn-primary" style={{ height: '46px', whiteSpace: 'nowrap' }}>
+                            SAVE TASK
+                        </button>
                     </div>
                 </form>
             )}
@@ -194,13 +183,18 @@ export const TaskList = () => {
                                                     style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', color: 'white', padding: '2px 4px', width: '100%' }}
                                                 />
                                                 <input
-                                                    list="group-suggestions"
-                                                    value={editGroup}
-                                                    onChange={e => setEditGroup(e.target.value)}
-                                                    style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', color: 'white', padding: '2px 4px', width: '80px' }}
+                                                    style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)', padding: '2px 4px', width: '80px' }}
                                                     placeholder="Group"
                                                 />
-                                                <button onClick={() => saveEdit(task.id)} style={{ color: 'var(--status-success)', background: 'none', border: 'none', cursor: 'pointer' }}>✓</button>
+                                                <div style={{ width: '150px' }}>
+                                                    <CustomDatePicker
+                                                        selected={editDate}
+                                                        onChange={(date) => setEditDate(date)}
+                                                        placeholder="Due Date"
+                                                        showTimeSelect={true}
+                                                    />
+                                                </div>
+                                                <button onClick={() => saveEdit(task.id)} style={{ color: 'var(--status-success)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }}>✓</button>
                                                 <button onClick={cancelEditing} style={{ color: 'var(--status-danger)', background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
                                             </div>
                                         ) : (

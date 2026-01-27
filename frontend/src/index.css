@@ -114,3 +114,119 @@ button {
   cursor: not-allowed;
   transform: none;
 }
+
+/* Task Form Premium Styles */
+.task-creation-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  transition: box-shadow 0.2s ease;
+}
+
+.task-creation-card:focus-within {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+  border-color: var(--border-active);
+}
+
+.form-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.025em;
+  margin-bottom: 0.5rem;
+  display: block;
+  text-transform: uppercase;
+}
+
+.input-premium {
+  width: 100%;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-btn);
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.input-premium:focus {
+  background: var(--bg-card);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.input-premium::placeholder {
+  color: #9ca3af;
+}
+
+/* Custom Select styling hack for datalist input */
+input[list]::-webkit-calendar-picker-indicator {
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+input[list]:hover::-webkit-calendar-picker-indicator {
+  opacity: 1;
+}
+
+.glass-datepicker {
+  font-family: var(--font-sans) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: var(--radius-card) !important;
+  background-color: var(--bg-card) !important;
+  box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.15), 0 4px 8px -4px rgba(0, 0, 0, 0.1) !important;
+  overflow: hidden;
+}
+
+.react-datepicker__header {
+  background-color: var(--bg-secondary) !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
+}
+
+.react-datepicker__current-month,
+.react-datepicker-time__header,
+.react-datepicker-year-header {
+  color: var(--text-primary) !important;
+  font-weight: 600 !important;
+}
+
+.react-datepicker__day-name {
+  color: var(--text-secondary) !important;
+}
+
+.react-datepicker__day {
+  color: var(--text-primary) !important;
+}
+
+.react-datepicker__day:hover {
+  background-color: var(--bg-primary) !important;
+  border-radius: 50%;
+}
+
+.react-datepicker__day--selected,
+.react-datepicker__day--keyboard-selected {
+  background-color: var(--text-primary) !important;
+  color: var(--bg-primary) !important;
+  border-radius: 50%;
+}
+
+.react-datepicker__time-container {
+  border-left: 1px solid var(--border-subtle) !important;
+}
+
+.react-datepicker__time-container .react-datepicker__time .react-datepicker__time-box ul.react-datepicker__time-list li.react-datepicker__time-list-item {
+  color: var(--text-primary) !important;
+}
+
+.react-datepicker__time-container .react-datepicker__time .react-datepicker__time-box ul.react-datepicker__time-list li.react-datepicker__time-list-item:hover {
+  background-color: var(--bg-primary) !important;
+}
+
+.react-datepicker__time-container .react-datepicker__time .react-datepicker__time-box ul.react-datepicker__time-list li.react-datepicker__time-list-item--selected {
+  background-color: var(--text-primary) !important;
+  color: var(--bg-primary) !important;
+}
