@@ -22,11 +22,23 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
+    hashed_password = Column(String, nullable=True) # Nullable for Google Users
+    google_sub = Column(String, unique=True, index=True, nullable=True)
     is_active = Column(Boolean, default=True)
 
     accounts = relationship("Account", back_populates="owner")
     plaid_items = relationship("PlaidItem", back_populates="owner")
+    household_id = Column(Integer, ForeignKey("households.id"), nullable=True)
+    household = relationship("Household", back_populates="users")
+
+class Household(Base):
+    __tablename__ = "households"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True) # e.g. "The Caughey Family"
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    users = relationship("User", back_populates="household")
 
 class PlaidItem(Base):
     __tablename__ = "plaid_items"

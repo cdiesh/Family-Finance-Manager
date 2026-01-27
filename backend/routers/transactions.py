@@ -17,10 +17,14 @@ def read_transactions(
 ):
     # Only return transactions for accounts owned by current_user
     # Join Transaction -> Account -> User
-    return db.query(models.Transaction)\
-             .join(models.Account)\
-             .filter(models.Account.owner_id == current_user.id)\
-             .order_by(desc(models.Transaction.date))\
+    query = db.query(models.Transaction).join(models.Account).join(models.User, models.Account.owner_id == models.User.id)
+    
+    if current_user.household_id:
+        query = query.filter(models.User.household_id == current_user.household_id)
+    else:
+        query = query.filter(models.Account.owner_id == current_user.id)
+        
+    return query.order_by(desc(models.Transaction.date))\
              .offset(skip)\
              .limit(limit)\
              .all()

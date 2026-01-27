@@ -7,3 +7,9 @@ python-dotenv>=1.0.1
 psycopg2-binary>=2.9.9
 httpx>=0.26.0
 plaid-python>=4.0.0
+python-jose[cryptography]
+python-multipart
+bcrypt
+authlib
+itsdangerous
+google-auth

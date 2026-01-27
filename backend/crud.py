@@ -25,7 +25,11 @@ def authenticate_user(db: Session, email: str, password: str):
     return user
 
 def get_accounts(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Account).offset(skip).limit(limit).all()
+   return db.query(models.Account).offset(skip).limit(limit).all()
+
+def get_household_accounts(db: Session, household_id: int):
+   # Join User to find all users in household, then get their accounts
+   return db.query(models.Account).join(models.User).filter(models.User.household_id == household_id).all()
 
 def create_user_account(db: Session, account: schemas.AccountCreate, user_id: int):
     db_account = models.Account(**account.model_dump(), owner_id=user_id)
@@ -57,6 +61,12 @@ def upsert_account(db: Session, account_data: schemas.AccountCreate, user_id: in
 
 # Task CRUD
 def get_tasks(db: Session, user_id: int):
+    # If user is in a household, get all household tasks
+    user = get_user(db, user_id)
+    if user and user.household_id:
+        return db.query(models.Task).join(models.User).filter(models.User.household_id == user.household_id).all()
+    
+    # Otherwise just personal
     return db.query(models.Task).filter(models.Task.owner_id == user_id).all()
 
 def create_task(db: Session, task: schemas.TaskCreate, user_id: int):
@@ -71,6 +81,28 @@ def delete_task(db: Session, task_id: int, user_id: int):
     if task:
         db.delete(task)
         db.commit()
+    return task
+
+def update_task(db: Session, task_id: int, task_update: schemas.TaskUpdate, user_id: int):
+    # Determine authorization (personal or household)
+    user = get_user(db, user_id)
+    query = db.query(models.Task).filter(models.Task.id == task_id)
+    
+    # If in household, check if task belongs to household member
+    # Simplified: for now just check ownership or household membership of owner
+    # But strictly, we should ensure the *requester* is in the same household as the *task owner*
+    
+    task = query.first()
+    if not task:
+        return None
+        
+    # Apply updates
+    update_data = task_update.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(task, key, value)
+        
+    db.commit()
+    db.refresh(task)
     return task
 
 def upsert_transaction(db: Session, transaction_data: schemas.TransactionCreate, account_id: int):

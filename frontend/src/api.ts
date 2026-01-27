@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 export interface User {
   id: number;
@@ -41,6 +41,18 @@ export const api = {
       body: formData,
     });
     if (!response.ok) throw new Error('Login failed');
+    const data = await response.json();
+    localStorage.setItem('token', data.access_token);
+    return data.access_token;
+  },
+
+  loginGoogle: async (token: string): Promise<string> => {
+    const response = await fetch(`${API_URL}/google/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+    if (!response.ok) throw new Error('Google Login failed');
     const data = await response.json();
     localStorage.setItem('token', data.access_token);
     return data.access_token;
@@ -107,6 +119,13 @@ export const api = {
       headers: getHeaders(),
     });
     if (!response.ok) throw new Error('Failed to sync accounts');
+    if (!response.ok) throw new Error('Failed to sync accounts');
+    return response.json();
+  },
+
+  getAccounts: async (): Promise<Account[]> => {
+    const response = await fetch(`${API_URL}/accounts/`, { headers: getHeaders() });
+    if (!response.ok) throw new Error('Failed to fetch accounts');
     return response.json();
   },
 
@@ -126,12 +145,42 @@ export const api = {
     return response.json();
   },
 
+  updateTask: async (id: number, updates: Partial<{ title: string; group: string; is_completed: boolean; due_date: string }>) => {
+    const response = await fetch(`${API_URL}/tasks/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(updates),
+    });
+    if (!response.ok) throw new Error('Failed to update task');
+    return response.json();
+  },
+
   updateTransactionTax: async (id: number, is_tax_deductible: boolean) => {
     const response = await fetch(`${API_URL}/transactions/${id}/tax_deductible?is_tax_deductible=${is_tax_deductible}`, {
       method: 'PUT',
       headers: getHeaders(),
     });
     if (!response.ok) throw new Error('Failed to update tax status');
+    return response.json();
+  },
+
+  // Plaid Link
+  createLinkToken: async () => {
+    const response = await fetch(`${API_URL}/plaid/create_link_token`, {
+      method: 'POST',
+      headers: getHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to create link token');
+    return response.json();
+  },
+
+  exchangePublicToken: async (publicToken: string, institutionName: string) => {
+    const response = await fetch(`${API_URL}/plaid/exchange_public_token`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ public_token: publicToken, institution_name: institutionName }),
+    });
+    if (!response.ok) throw new Error('Failed to exchange public token');
     return response.json();
   }
 };

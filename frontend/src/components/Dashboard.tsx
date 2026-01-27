@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, type User } from '../api';
+import { api, type User, type Account } from '../api';
 import { LinkButton } from './LinkButton';
 import { Login } from './Login';
 import { TaskList } from './TaskList';
@@ -9,6 +9,7 @@ import { TransactionGrid } from './TransactionGrid';
 export const Dashboard = () => {
     const [status, setStatus] = useState<string>('Connecting...');
     const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [accounts, setAccounts] = useState<Account[]>([]); // Household accounts
     const [checkingAuth, setCheckingAuth] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
 
@@ -16,8 +17,11 @@ export const Dashboard = () => {
         try {
             const user = await api.getMe();
             setCurrentUser(user);
+            const householdAccounts = await api.getAccounts();
+            setAccounts(householdAccounts);
         } catch {
             setCurrentUser(null);
+            setAccounts([]);
         }
     };
 
@@ -63,7 +67,7 @@ export const Dashboard = () => {
     }
 
     // Calculate Net Worth
-    const netWorth = currentUser.accounts.reduce((sum, acc) => {
+    const netWorth = accounts.reduce((sum, acc) => {
         // Logic: Depository/Investment is +, Credit/Loan is -
         const isLiability = ['credit', 'loan', 'mortgage'].includes(acc.type);
         return sum + (isLiability ? -acc.balance : acc.balance);
@@ -127,7 +131,7 @@ export const Dashboard = () => {
                         ${netWorth.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </h2>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                        {currentUser.accounts.length} Accounts Linked
+                        {accounts.length} Accounts Linked
                     </p>
                 </div>
 
@@ -143,13 +147,13 @@ export const Dashboard = () => {
                 <div className="glass-panel" style={{ gridColumn: 'span 4', padding: '1.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                     <h3>[ 03 ] CONNECTIONS</h3>
                     <div style={{ marginTop: '1rem' }}>
-                        <LinkButton userId={currentUser.id} />
+                        <LinkButton />
                     </div>
                 </div>
 
                 {/* Row 2: Accounts List */}
                 <div style={{ gridColumn: 'span 12' }}>
-                    <AccountList accounts={currentUser.accounts} />
+                    <AccountList accounts={accounts} />
                 </div>
 
                 {/* Row 3: Transaction Grid */}

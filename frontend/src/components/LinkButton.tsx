@@ -1,58 +1,35 @@
 import { useEffect, useState, useCallback } from 'react';
 import { usePlaidLink, type PlaidLinkOnSuccess, type PlaidLinkOnExit } from 'react-plaid-link';
+import { api } from '../api';
 
-const API_URL = 'http://localhost:8000';
-
-interface LinkProps {
-    userId: number;
-}
-
-export const LinkButton = ({ userId }: LinkProps) => {
+export const LinkButton = () => {
     const [token, setToken] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     const createLinkToken = useCallback(async () => {
         try {
-            const response = await fetch(`${API_URL}/plaid/create_link_token?user_id=${userId}`, {
-                method: 'POST',
-            });
-            if (!response.ok) {
-                throw new Error(`API Error: ${response.status}`);
-            }
-            const data = await response.json();
+            const data = await api.createLinkToken();
             setToken(data.link_token);
         } catch (err: unknown) {
             console.error('Error creating link token', err);
             setError(err instanceof Error ? err.message : 'Failed to load');
         }
-    }, [userId]);
+    }, []);
 
     useEffect(() => {
-        if (userId) {
-            createLinkToken();
-        }
-    }, [userId, createLinkToken]);
+        createLinkToken();
+    }, [createLinkToken]);
 
     const onSuccess = useCallback<PlaidLinkOnSuccess>(async (publicToken, metadata) => {
         try {
-            await fetch(`${API_URL}/plaid/exchange_public_token`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    public_token: publicToken,
-                    user_id: userId,
-                    institution_name: metadata.institution?.name,
-                }),
-            });
+            await api.exchangePublicToken(publicToken, metadata.institution?.name || "Unknown Bank");
             alert(`Successfully linked ${metadata.institution?.name}!`);
-            // TODO: Refresh dashboard data
             window.location.reload();
         } catch (err) {
             console.error('Error exchanging token', err);
+            alert('Failed to exchange token');
         }
-    }, [userId]);
+    }, []);
 
     const onExit = useCallback<PlaidLinkOnExit>((error, metadata) => {
         if (error) console.error('Plaid Link Exit:', error, metadata);

@@ -18,11 +18,11 @@ router = APIRouter()
 
 class PublicTokenRequest(BaseModel):
     public_token: str
-    user_id: int
     institution_name: str | None = None
+    # user_id removed, inferred from token
 
 @router.post("/create_link_token")
-def create_link_token(user_id: int):
+def create_link_token(current_user: models.User = Depends(get_current_active_user)):
     # products = [Products("transactions"), Products("auth")]
     # Sandbox requires fewer products to start simple
     request = LinkTokenCreateRequest(
@@ -31,14 +31,18 @@ def create_link_token(user_id: int):
         country_codes=[CountryCode("US")],
         language="en",
         user=LinkTokenCreateRequestUser(
-            client_user_id=str(user_id)
+            client_user_id=str(current_user.id)
         )
     )
     response = client.link_token_create(request)
     return response.to_dict()
 
 @router.post("/exchange_public_token")
-def exchange_public_token(request: PublicTokenRequest, db: Session = Depends(get_db)):
+def exchange_public_token(
+    request: PublicTokenRequest, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
     exchange_request = ItemPublicTokenExchangeRequest(
         public_token=request.public_token
     )
@@ -48,7 +52,7 @@ def exchange_public_token(request: PublicTokenRequest, db: Session = Depends(get
     
     # Store access token in DB
     plaid_item = models.PlaidItem(
-        user_id=request.user_id,
+        user_id=current_user.id,
         access_token=access_token,
         item_id=item_id,
         institution_name=request.institution_name or "Unknown Bank"

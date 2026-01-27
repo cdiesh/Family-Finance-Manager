@@ -76,6 +76,12 @@ class TaskBase(BaseModel):
 class TaskCreate(TaskBase):
     pass
 
+class TaskUpdate(BaseModel):
+    title: Optional[str] = None
+    group: Optional[str] = None
+    due_date: Optional[datetime] = None
+    is_completed: Optional[bool] = None
+
 class Task(TaskBase):
     id: int
     owner_id: int
