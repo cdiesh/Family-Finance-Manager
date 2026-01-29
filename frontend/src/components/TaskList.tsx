@@ -13,14 +13,22 @@ interface Task {
 
 const SUGGESTED_GROUPS = ['General', 'Tax', 'House', 'Kids', 'Finance', 'Bills'];
 
+const groupColors: Record<string, string> = {
+    'General': 'var(--text-secondary)',
+    'Tax': '#f87171',
+    'House': '#60a5fa',
+    'Kids': '#a78bfa',
+    'Finance': 'var(--accent-gold)',
+    'Bills': '#fb923c'
+};
+
 export const TaskList = () => {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [newTaskTitle, setNewTaskTitle] = useState('');
-    const [newTaskGroup, setNewTaskGroup] = useState(''); // Allow typing
+    const [newTaskGroup, setNewTaskGroup] = useState('');
     const [newTaskDate, setNewTaskDate] = useState<Date | null>(null);
     const [isAdding, setIsAdding] = useState(false);
 
-    // Edit State
     const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
     const [editTitle, setEditTitle] = useState('');
     const [editGroup, setEditGroup] = useState('');
@@ -41,6 +49,7 @@ export const TaskList = () => {
 
     const handleAdd = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!newTaskTitle.trim()) return;
         await api.createTask({
             title: newTaskTitle,
             group: newTaskGroup || 'General',
@@ -53,7 +62,6 @@ export const TaskList = () => {
         loadTasks();
     };
 
-    // Make sure to delete the task from the database
     const handleDelete = async (id: number) => {
         await api.deleteTask(id);
         loadTasks();
@@ -83,48 +91,69 @@ export const TaskList = () => {
         loadTasks();
     };
 
-    // Get unique existing groups from tasks + suggestions
     const existingGroups = Array.from(new Set([...SUGGESTED_GROUPS, ...tasks.map(t => t.group)]));
 
-    // Group tasks
     const groupedTasks = tasks.reduce((acc, task) => {
         if (!acc[task.group]) acc[task.group] = [];
         acc[task.group].push(task);
         return acc;
     }, {} as Record<string, Task[]>);
 
+    const getGroupColor = (group: string) => groupColors[group] || 'var(--text-secondary)';
+
     return (
-        <div className="glass-panel" style={{ padding: '2rem', marginTop: '2rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                <h3>[ 04 ] FAMILY_OPERATIONS_CENTER</h3>
+        <div className="glass-panel" style={{ padding: '2rem' }}>
+            {/* Header */}
+            <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '2rem'
+            }}>
+                <div>
+                    <h3 style={{ marginBottom: '0.5rem' }}>Family Tasks</h3>
+                    <p style={{ fontSize: '0.85rem' }}>
+                        {tasks.length} {tasks.length === 1 ? 'task' : 'tasks'} across {Object.keys(groupedTasks).length} categories
+                    </p>
+                </div>
                 <button
-                    className="btn-primary"
+                    className={isAdding ? 'btn-ghost' : 'btn-primary'}
                     onClick={() => setIsAdding(!isAdding)}
                 >
-                    {isAdding ? 'CANCEL' : '+ NEW ITEM'}
+                    {isAdding ? 'Cancel' : '+ New Task'}
                 </button>
             </div>
 
-            {/* NEW ITEM FORM */}
+            {/* New Task Form */}
             {isAdding && (
                 <form onSubmit={handleAdd} className="task-creation-card">
-                    <h4 style={{ marginBottom: '1.5rem', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.75rem' }}>
-                        CREATE NEW TASK
+                    <h4 style={{
+                        marginBottom: '1.5rem',
+                        color: 'var(--text-primary)',
+                        borderBottom: '1px solid var(--border-subtle)',
+                        paddingBottom: '0.75rem'
+                    }}>
+                        Create New Task
                     </h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr 1.5fr auto', gap: '1rem', alignItems: 'end' }}>
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: '2fr 1fr 1fr auto',
+                        gap: '1rem',
+                        alignItems: 'end'
+                    }}>
                         <div>
-                            <label className="form-label">DESCRIPTION</label>
+                            <label className="form-label">Description</label>
                             <input
                                 value={newTaskTitle}
                                 onChange={(e) => setNewTaskTitle(e.target.value)}
-                                placeholder="What needs doing?"
+                                placeholder="What needs to be done?"
                                 className="input-premium"
                                 autoFocus
                             />
                         </div>
 
                         <div>
-                            <label className="form-label">CATEGORY</label>
+                            <label className="form-label">Category</label>
                             <input
                                 list="group-suggestions"
                                 value={newTaskGroup}
@@ -138,90 +167,230 @@ export const TaskList = () => {
                         </div>
 
                         <div>
-                            <label className="form-label">DUE DATE</label>
+                            <label className="form-label">Due Date</label>
                             <CustomDatePicker
                                 selected={newTaskDate}
                                 onChange={(date) => setNewTaskDate(date)}
-                                placeholder="Select Date & Time"
+                                placeholder="Select date"
                             />
                         </div>
 
-                        <button type="submit" className="btn-primary" style={{ height: '46px', whiteSpace: 'nowrap' }}>
-                            SAVE TASK
+                        <button
+                            type="submit"
+                            className="btn-primary"
+                            style={{ height: '46px', whiteSpace: 'nowrap' }}
+                        >
+                            Save
                         </button>
                     </div>
                 </form>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-
-                {/* LEFT COLUMN: CALENDAR */}
+            {/* Main Content */}
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '2rem'
+            }}>
+                {/* Calendar View */}
                 <div>
-                    <h4 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>CALENDAR VIEW</h4>
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        marginBottom: '1.5rem',
+                        paddingBottom: '1rem',
+                        borderBottom: '1px solid var(--border-subtle)'
+                    }}>
+                        <span style={{ fontSize: '1.25rem' }}>📅</span>
+                        <h4 style={{ margin: 0, color: 'var(--text-primary)' }}>Calendar</h4>
+                    </div>
                     <Calendar tasks={tasks} />
                 </div>
 
-                {/* RIGHT COLUMN: LISTS */}
-                <div style={{ borderLeft: '1px solid var(--border-subtle)', paddingLeft: '2rem' }}>
-                    <h4 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem' }}>MASTER TASK LIST</h4>
+                {/* Task List */}
+                <div style={{
+                    borderLeft: '1px solid var(--border-subtle)',
+                    paddingLeft: '2rem'
+                }}>
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        marginBottom: '1.5rem',
+                        paddingBottom: '1rem',
+                        borderBottom: '1px solid var(--border-subtle)'
+                    }}>
+                        <span style={{ fontSize: '1.25rem' }}>📋</span>
+                        <h4 style={{ margin: 0, color: 'var(--text-primary)' }}>All Tasks</h4>
+                    </div>
 
                     {Object.keys(groupedTasks).length === 0 && (
-                        <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>No active tasks.</div>
+                        <div style={{
+                            textAlign: 'center',
+                            padding: '3rem 2rem',
+                            background: 'var(--bg-secondary)',
+                            borderRadius: 'var(--radius-md)',
+                            border: '1px dashed var(--border-subtle)'
+                        }}>
+                            <div style={{ fontSize: '2rem', marginBottom: '1rem', opacity: 0.5 }}>✓</div>
+                            <p style={{ color: 'var(--text-secondary)' }}>No tasks yet</p>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                                Create your first task above
+                            </p>
+                        </div>
                     )}
 
-                    {Object.entries(groupedTasks).map(([group, groupTasks]) => (
-                        <div key={group} style={{ marginBottom: '1.5rem' }}>
-                            <h5 style={{ color: 'var(--accent-primary)', marginBottom: '0.5rem', textTransform: 'uppercase', fontSize: '0.8rem' }}>{group}</h5>
-                            <ul style={{ listStyleType: 'disc', paddingLeft: '1.5rem', margin: 0 }}>
-                                {groupTasks.map(task => (
-                                    <li key={task.id} style={{ marginBottom: '0.5rem', fontSize: '0.9rem' }}>
-                                        {editingTaskId === task.id ? (
-                                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                                <input
-                                                    value={editTitle}
-                                                    onChange={e => setEditTitle(e.target.value)}
-                                                    style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', color: 'white', padding: '2px 4px', width: '100%' }}
-                                                />
-                                                <input
-                                                    style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', color: 'var(--text-primary)', padding: '2px 4px', width: '80px' }}
-                                                    placeholder="Group"
-                                                />
-                                                <div style={{ width: '150px' }}>
-                                                    <CustomDatePicker
-                                                        selected={editDate}
-                                                        onChange={(date) => setEditDate(date)}
-                                                        placeholder="Due Date"
-                                                        showTimeSelect={true}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                        {Object.entries(groupedTasks).map(([group, groupTasks]) => (
+                            <div key={group}>
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    marginBottom: '0.75rem'
+                                }}>
+                                    <span style={{
+                                        width: '8px',
+                                        height: '8px',
+                                        borderRadius: '50%',
+                                        background: getGroupColor(group)
+                                    }} />
+                                    <span style={{
+                                        fontSize: '0.75rem',
+                                        fontWeight: 600,
+                                        color: getGroupColor(group),
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.05em'
+                                    }}>
+                                        {group}
+                                    </span>
+                                    <span style={{
+                                        fontSize: '0.7rem',
+                                        color: 'var(--text-muted)',
+                                        marginLeft: 'auto'
+                                    }}>
+                                        {groupTasks.length}
+                                    </span>
+                                </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                    {groupTasks.map(task => (
+                                        <div
+                                            key={task.id}
+                                            style={{
+                                                padding: '0.75rem 1rem',
+                                                borderRadius: 'var(--radius-md)',
+                                                background: 'var(--bg-elevated)',
+                                                border: '1px solid var(--border-subtle)',
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.borderColor = 'var(--border-medium)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                                            }}
+                                        >
+                                            {editingTaskId === task.id ? (
+                                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                    <input
+                                                        value={editTitle}
+                                                        onChange={e => setEditTitle(e.target.value)}
+                                                        className="input-premium"
+                                                        style={{ flex: 1, padding: '0.5rem 0.75rem', fontSize: '0.85rem' }}
                                                     />
+                                                    <div style={{ width: '120px' }}>
+                                                        <CustomDatePicker
+                                                            selected={editDate}
+                                                            onChange={(date) => setEditDate(date)}
+                                                            placeholder="Due"
+                                                            showTimeSelect={true}
+                                                        />
+                                                    </div>
+                                                    <button
+                                                        onClick={() => saveEdit(task.id)}
+                                                        className="btn-ghost"
+                                                        style={{ color: 'var(--positive)', fontSize: '1.1rem', padding: '0.25rem' }}
+                                                    >
+                                                        ✓
+                                                    </button>
+                                                    <button
+                                                        onClick={cancelEditing}
+                                                        className="btn-ghost"
+                                                        style={{ color: 'var(--negative)', fontSize: '0.9rem', padding: '0.25rem' }}
+                                                    >
+                                                        ×
+                                                    </button>
                                                 </div>
-                                                <button onClick={() => saveEdit(task.id)} style={{ color: 'var(--status-success)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem' }}>✓</button>
-                                                <button onClick={cancelEditing} style={{ color: 'var(--status-danger)', background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
-                                            </div>
-                                        ) : (
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                                                <span style={{
-                                                    color: task.is_completed ? 'var(--text-secondary)' : 'var(--text-primary)',
-                                                    textDecoration: task.is_completed ? 'line-through' : 'none',
-                                                    cursor: 'pointer'
-                                                }} onClick={() => startEditing(task)} title="Click to Edit">
-                                                    {task.title}
-                                                    {task.due_date && (
-                                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginLeft: '0.5rem' }}>
-                                                            📅 {new Date(task.due_date).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' })}
+                                            ) : (
+                                                <div style={{
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center'
+                                                }}>
+                                                    <div
+                                                        onClick={() => startEditing(task)}
+                                                        style={{
+                                                            flex: 1,
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '0.75rem'
+                                                        }}
+                                                    >
+                                                        <span style={{
+                                                            color: task.is_completed ? 'var(--text-muted)' : 'var(--text-primary)',
+                                                            textDecoration: task.is_completed ? 'line-through' : 'none',
+                                                            fontSize: '0.9rem'
+                                                        }}>
+                                                            {task.title}
                                                         </span>
-                                                    )}
-                                                </span>
-                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                    <button onClick={() => startEditing(task)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', opacity: 0.5 }}>✎</button>
-                                                    <button onClick={() => handleDelete(task.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: '0.8rem', opacity: 0.5 }}>✕</button>
+                                                        {task.due_date && (
+                                                            <span style={{
+                                                                fontSize: '0.7rem',
+                                                                color: 'var(--text-muted)',
+                                                                background: 'var(--bg-secondary)',
+                                                                padding: '0.2rem 0.5rem',
+                                                                borderRadius: '4px'
+                                                            }}>
+                                                                {new Date(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                                        <button
+                                                            onClick={() => startEditing(task)}
+                                                            className="btn-ghost"
+                                                            style={{
+                                                                fontSize: '0.75rem',
+                                                                padding: '0.25rem 0.5rem',
+                                                                opacity: 0.5
+                                                            }}
+                                                        >
+                                                            Edit
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(task.id)}
+                                                            className="btn-ghost"
+                                                            style={{
+                                                                fontSize: '0.75rem',
+                                                                padding: '0.25rem 0.5rem',
+                                                                opacity: 0.5,
+                                                                color: 'var(--negative)'
+                                                            }}
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        )}
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    ))}
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
         </div>
