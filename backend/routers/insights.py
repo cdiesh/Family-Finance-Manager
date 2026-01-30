@@ -15,6 +15,7 @@ def get_spending_insights(
     time_range: str = "365d",
     month: int = None,
     year: int = None,
+    source_type: str = "all", # "all", "credit", "depository"
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ):
@@ -41,8 +42,16 @@ def get_spending_insights(
         start_date = end_date - timedelta(days=365)
         end_date_filter = end_date
 
-    # Fetch User Accounts
-    account_ids = [a.id for a in current_user.accounts if not a.is_hidden]
+    # Filter Accounts by Source Type
+    user_accounts = [a for a in current_user.accounts if not a.is_hidden]
+    
+    if source_type == "credit":
+        user_accounts = [a for a in user_accounts if a.type == "credit_card"]
+    elif source_type == "depository":
+        user_accounts = [a for a in user_accounts if a.type in ["checking", "savings"]]
+        
+    account_ids = [a.id for a in user_accounts]
+    
     if not account_ids:
         return {"trend": [], "distribution": []}
 
@@ -144,6 +153,26 @@ def run_auto_categorization(
     
     updates_count = 0
     
+    # User-Specific Rules (Verified from Screenshot)
+    specific_rules = {
+        "openai": {"category": "Software", "is_fixed": True, "tags": "AI Tools"},
+        "claude": {"category": "Software", "is_fixed": True, "tags": "AI Tools"},
+        "chatgpt": {"category": "Software", "is_fixed": True, "tags": "AI Tools"},
+        "tidewater": {"category": "Utilities", "is_fixed": True, "tags": "Water"},
+        "awrusa": {"category": "Utilities", "is_fixed": True, "tags": "Water"},
+        "amer water": {"category": "Utilities", "is_fixed": True, "tags": "Water"},
+        "miyagi ramen": {"category": "Dining", "is_fixed": False, "tags": "Restaurants"},
+        "station on kings": {"category": "Dining", "is_fixed": False, "tags": "Restaurants"},
+        "beach babies": {"category": "Childcare", "is_fixed": True, "tags": "Kids"},
+        "rentometer": {"category": "Business", "is_fixed": False, "tags": "Real Estate"},
+        "redner": {"category": "Groceries", "is_fixed": False, "tags": "Food"},
+        "giant": {"category": "Groceries", "is_fixed": False, "tags": "Food"},
+        "acme": {"category": "Groceries", "is_fixed": False, "tags": "Food"},
+        "wawa": {"category": "Gas", "is_fixed": False, "tags": "Car"},
+        "exxon": {"category": "Gas", "is_fixed": False, "tags": "Car"},
+        "shell": {"category": "Gas", "is_fixed": False, "tags": "Car"},
+    }
+
     fixed_keywords = ["mortgage", "loan", "netflix", "spotify", "hulu", "insurance", "verizon", "at&t", "comcast", "xfinity", "gym", "hoa"]
     work_keywords = ["doordash", "uber", "lyft", "wework", "aws", "github"]
     
@@ -154,6 +183,20 @@ def run_auto_categorization(
         if "payment to chase" in desc or "payment to amex" in desc or "credit card payment" in desc or "payment to citi" in desc or "payment to discover" in desc:
             tx.category = "Credit Card Payment"
             updates_count += 1
+            continue
+
+        # 0.5 SPECIFIC USER RULES (High Priority)
+        found_specific = False
+        for key, rule in specific_rules.items():
+            if key in desc:
+                tx.category = rule["category"]
+                tx.is_fixed = rule["is_fixed"]
+                tx.tags = rule["tags"]
+                updates_count += 1
+                found_specific = True
+                break
+        
+        if found_specific:
             continue
 
         # 1. HISTORY MATCHING (Smart Learning)
@@ -212,13 +255,22 @@ def get_insights_transactions(
     month: int = None,
     year: int = None,
     category: str = None,
+    source_type: str = "all",
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_active_user)
 ):
     """
     Drill-down: Get individual transactions for a specific period/category.
     """
-    account_ids = [a.id for a in current_user.accounts if not a.is_hidden]
+    # Filter Accounts by Source Type
+    user_accounts = [a for a in current_user.accounts if not a.is_hidden]
+    
+    if source_type == "credit":
+        user_accounts = [a for a in user_accounts if a.type == "credit_card"]
+    elif source_type == "depository":
+        user_accounts = [a for a in user_accounts if a.type in ["checking", "savings"]]
+        
+    account_ids = [a.id for a in user_accounts]
     
     query = db.query(models.Transaction).filter(
         models.Transaction.account_id.in_(account_ids),

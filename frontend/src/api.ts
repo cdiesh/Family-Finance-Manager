@@ -254,8 +254,8 @@ export const api = {
 
   // Insights (New)
   // Insights (New)
-  getInsights: async (timeRange: string = '365d', month?: number | null, year?: number | null) => {
-    let url = `${API_URL}/insights/spending?time_range=${timeRange}`;
+  getInsights: async (timeRange: string = '365d', month?: number | null, year?: number | null, sourceType: string = 'all') => {
+    let url = `${API_URL}/insights/spending?time_range=${timeRange}&source_type=${sourceType}`;
     if (month && year) {
       url += `&month=${month}&year=${year}`;
     }
@@ -264,9 +264,9 @@ export const api = {
     return response.json();
   },
 
-  getInsightsTransactions: async (month?: number | null, year?: number | null) => {
+  getInsightsTransactions: async (month?: number | null, year?: number | null, sourceType: string = 'all') => {
     let url = `${API_URL}/insights/transactions`;
-    const params = [];
+    const params = [`source_type=${sourceType}`];
     if (month && year) {
       params.push(`month=${month}`);
       params.push(`year=${year}`);
@@ -286,6 +286,16 @@ export const api = {
       headers: getHeaders(),
     });
     if (!response.ok) throw new Error('Failed to run AI categorization');
+    return response.json();
+  },
+
+  updateTransaction: async (id: number, updates: { category?: string; tags?: string; is_fixed?: boolean }) => {
+    const response = await fetch(`${API_URL}/transactions/${id}/update`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(updates),
+    });
+    if (!response.ok) throw new Error('Failed to update transaction');
     return response.json();
   }
 };

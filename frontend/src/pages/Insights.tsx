@@ -25,23 +25,22 @@ export const Insights = ({ onNavigateToDashboard }: { onNavigateToDashboard: () 
     // Filters
     const [selectedYear, setSelectedYear] = useState<number | null>(null);
     const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+    const [sourceType, setSourceType] = useState<string>("all"); // "all", "credit", "depository"
 
     useEffect(() => {
         loadInsights();
-    }, [selectedYear, selectedMonth]);
+    }, [selectedYear, selectedMonth, sourceType]);
 
     const loadInsights = async () => {
         setLoading(true);
         try {
             // 1. Fetch Charts
-            const data = await api.getInsights('365d', selectedMonth, selectedYear);
+            const data = await api.getInsights('365d', selectedMonth, selectedYear, sourceType);
             setSpendingData(data.trend);
             setCategoryData(data.distribution);
 
-            // 2. Fetch Transactions (if specific month or just recent)
-            // If strict month selected, fetch for that month. Else fetch recent?
-            // Let's always fetch relevant transactions for the view.
-            const txs = await api.getInsightsTransactions(selectedMonth, selectedYear);
+            // 2. Fetch Transactions
+            const txs = await api.getInsightsTransactions(selectedMonth, selectedYear, sourceType);
             setTransactions(txs);
 
         } catch (e) {
@@ -61,6 +60,19 @@ export const Insights = ({ onNavigateToDashboard }: { onNavigateToDashboard: () 
         } catch (e) {
             console.error(e);
             setAgentStatus("Error running agent.");
+        }
+    };
+
+    const handleCategoryUpdate = async (txId: number, newCategory: string) => {
+        try {
+            // Optimistic Update
+            setTransactions(prev => prev.map(tx => tx.id === txId ? { ...tx, category: newCategory } : tx));
+            await api.updateTransaction(txId, { category: newCategory });
+            // Ideally re-fetch charts too, but for speed we wait? No, let's refresh.
+            // await loadInsights(); // Maybe too heavy? Let's just update local state.
+        } catch (e) {
+            console.error("Failed to update category", e);
+            alert("Failed to update category");
         }
     };
 
@@ -85,6 +97,7 @@ export const Insights = ({ onNavigateToDashboard }: { onNavigateToDashboard: () 
     const clearFilters = () => {
         setSelectedMonth(null);
         setSelectedYear(null);
+        setSourceType("all");
     };
 
     return (
@@ -100,6 +113,18 @@ export const Insights = ({ onNavigateToDashboard }: { onNavigateToDashboard: () 
                 <h1 style={{ margin: 0 }}>Financial Insights</h1>
 
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.5rem' }}>
+                    {/* Source Filter */}
+                    <select
+                        className="input-field"
+                        value={sourceType}
+                        onChange={(e) => setSourceType(e.target.value)}
+                        style={{ minWidth: '140px' }}
+                    >
+                        <option value="all">All Accounts</option>
+                        <option value="credit">Credit Cards</option>
+                        <option value="depository">Bank Accounts</option>
+                    </select>
+
                     {/* Simple Year Selector Stub */}
                     <select
                         className="input-field"
@@ -123,7 +148,7 @@ export const Insights = ({ onNavigateToDashboard }: { onNavigateToDashboard: () 
                         ))}
                     </select>
 
-                    {(selectedMonth || selectedYear) && (
+                    {(selectedMonth || selectedYear || sourceType !== 'all') && (
                         <button onClick={clearFilters} className="btn-ghost">Clear</button>
                     )}
                 </div>
@@ -135,7 +160,7 @@ export const Insights = ({ onNavigateToDashboard }: { onNavigateToDashboard: () 
                     <div>
                         <h3 style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>🤖 AI Financial Agent</h3>
                         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                            Auto-learns from your history. Categorize a month manually, and I will learn the rules.
+                            Auto-learns from your history. <b>Click on any Category below</b> to teach me new rules.
                         </p>
                         {agentStatus !== "Idle" && (
                             <p style={{ color: 'var(--accent-sage)', fontWeight: 600, marginTop: '0.5rem', marginLeft: '0.5rem', display: 'inline-block' }}>
@@ -234,14 +259,11 @@ export const Insights = ({ onNavigateToDashboard }: { onNavigateToDashboard: () 
                                         <td style={{ padding: '0.5rem' }}>{new Date(tx.date).toLocaleDateString()}</td>
                                         <td style={{ padding: '0.5rem' }}>{tx.description}</td>
                                         <td style={{ padding: '0.5rem' }}>
-                                            <span style={{
-                                                backgroundColor: tx.is_fixed ? 'rgba(136, 132, 216, 0.2)' : 'rgba(130, 202, 157, 0.2)',
-                                                padding: '2px 6px',
-                                                borderRadius: '4px',
-                                                fontSize: '0.8rem'
-                                            }}>
-                                                {tx.category || 'Uncategorized'}
-                                            </span>
+                                            <CategoryBadge
+                                                category={tx.category || 'Uncategorized'}
+                                                isFixed={tx.is_fixed}
+                                                onChange={(newCat) => handleCategoryUpdate(tx.id, newCat)}
+                                            />
                                         </td>
                                         <td style={{ padding: '0.5rem' }}>{tx.tags}</td>
                                         <td style={{ padding: '0.5rem', textAlign: 'right' }}>
@@ -268,5 +290,57 @@ export const Insights = ({ onNavigateToDashboard }: { onNavigateToDashboard: () 
             </div>
 
         </div>
+    );
+};
+
+// Internal Component for Interactive Category Badge
+const CategoryBadge = ({ category, isFixed, onChange }: { category: string, isFixed: boolean, onChange: (cat: string) => void }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [value, setValue] = useState(category);
+
+    const handleBlur = () => {
+        setIsEditing(false);
+        if (value !== category) {
+            onChange(value);
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            handleBlur();
+        }
+    };
+
+    if (isEditing) {
+        return (
+            <input
+                autoFocus
+                className="input-field"
+                style={{ padding: '2px 4px', fontSize: '0.8rem', width: '120px' }}
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                onBlur={handleBlur}
+                onKeyDown={handleKeyDown}
+            />
+        );
+    }
+
+    return (
+        <span
+            onClick={() => setIsEditing(true)}
+            style={{
+                backgroundColor: isFixed ? 'rgba(136, 132, 216, 0.2)' : 'rgba(130, 202, 157, 0.2)',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                border: '1px solid transparent',
+            }}
+            title="Click to edit category"
+            onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--text-muted)'}
+            onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
+        >
+            {category}
+        </span>
     );
 };

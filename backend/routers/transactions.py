@@ -47,3 +47,33 @@ def update_tax_status(
     tx.is_tax_deductible = is_tax_deductible
     db.commit()
     return {"status": "updated", "is_tax_deductible": is_tax_deductible}
+
+class TransactionUpdate(schemas.BaseModel):
+    category: str | None = None
+    tags: str | None = None
+    is_fixed: bool | None = None
+
+@router.put("/{transaction_id}/update")
+def update_transaction_details(
+    transaction_id: int,
+    updates: TransactionUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    tx = db.query(models.Transaction).filter(models.Transaction.id == transaction_id).first()
+    if not tx:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    # Simple ownership check
+    if tx.account.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    if updates.category is not None:
+        tx.category = updates.category
+    if updates.tags is not None:
+        tx.tags = updates.tags
+    if updates.is_fixed is not None:
+        tx.is_fixed = updates.is_fixed
+        
+    db.commit()
+    return {"status": "success", "id": tx.id}
