@@ -5,7 +5,26 @@ import crud, models, schemas
 from database import get_db
 from routers.auth import get_current_active_user
 
+from fastapi import APIRouter, Depends, HTTPException
+
 router = APIRouter()
+
+@router.put("/{account_id}/toggle_visibility")
+def toggle_visibility(
+    account_id: int, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    account = crud.get_account(db, account_id)
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+    if account.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    account.is_hidden = not account.is_hidden
+    db.commit()
+    db.refresh(account)
+    return account
 
 @router.get("/", response_model=List[schemas.Account])
 def read_accounts(

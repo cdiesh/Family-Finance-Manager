@@ -13,7 +13,8 @@ host = plaid.Environment.Sandbox
 if PLAID_ENV == "production":
     host = plaid.Environment.Production
 elif PLAID_ENV == "development":
-    host = plaid.Environment.Development
+    # host = "https://development.plaid.com" # DNS fails for this
+    host = plaid.Environment.Production # Try routing dev keys to prod endpoint
 
 configuration = plaid.Configuration(
     host=host,

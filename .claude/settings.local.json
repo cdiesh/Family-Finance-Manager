@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat\\(frontend\\): Modern light UI redesign with Cream & Sage theme\n\n- New design system with Fraunces serif + Plus Jakarta Sans typography\n- Warm cream background with sage green accents\n- Refined glass-panel cards with subtle shadows and hover animations\n- Staggered fade-in animations on page load\n- Redesigned Dashboard with improved metric cards layout\n- Updated AccountList with institution icons and category headers\n- New AssetList with collapsible sections for real estate & investments\n- Modernized TaskList with color-coded categories\n- Clean Login page with improved form styling\n- Updated LinkButton with inline SVG icons\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)"
+    ]
+  }
+}

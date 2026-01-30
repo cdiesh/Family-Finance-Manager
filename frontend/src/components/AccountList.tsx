@@ -1,4 +1,5 @@
 import type { Account } from '../api';
+import { PrivacyMask } from './PrivacyMask';
 
 // Institution icon mapping
 const getInstitutionIcon = (name: string) => {
@@ -129,7 +130,9 @@ export const AccountList = ({ accounts, onAccountClick }: { accounts: Account[],
                                         color: categoryConfig[category as keyof typeof categoryConfig].color
                                     }}>
                                         {category === 'LIABILITIES' ? '-' : ''}$
-                                        {Math.abs(list.reduce((sum, a) => sum + a.balance, 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                        <PrivacyMask>
+                                            {Math.abs(list.reduce((sum, a) => sum + a.balance, 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                        </PrivacyMask>
                                     </div>
                                 </div>
 
@@ -202,7 +205,9 @@ export const AccountList = ({ accounts, onAccountClick }: { accounts: Account[],
                                                     color: category === 'LIABILITIES' ? 'var(--negative)' : 'var(--text-primary)'
                                                 }}>
                                                     {category === 'LIABILITIES' ? '-' : ''}
-                                                    ${acc.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                                    <PrivacyMask>
+                                                        ${acc.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                                    </PrivacyMask>
                                                 </span>
                                                 <button
                                                     onClick={async (e) => {

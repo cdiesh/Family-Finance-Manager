@@ -54,7 +54,9 @@
 }
 
 /* Reset & Base */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -120,7 +122,12 @@ body::before {
 }
 
 /* Typography Scale */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   margin: 0;
   font-weight: 500;
 }
@@ -183,7 +190,7 @@ p {
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.8) 50%, transparent 100%);
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.8) 50%, transparent 100%);
 }
 
 .glass-panel:hover {
@@ -301,7 +308,7 @@ button {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
   transition: left 0.5s ease;
 }
 
@@ -482,6 +489,7 @@ select.input-premium {
     opacity: 0;
     transform: translateY(16px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -492,15 +500,19 @@ select.input-premium {
   0% {
     background-position: -200% 0;
   }
+
   100% {
     background-position: 200% 0;
   }
 }
 
 @keyframes pulse-sage {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 0 0 0 var(--accent-sage-soft);
   }
+
   50% {
     box-shadow: 0 0 20px 5px var(--accent-sage-soft);
   }
@@ -511,11 +523,25 @@ select.input-premium {
   opacity: 0;
 }
 
-.animate-delay-1 { animation-delay: 0.08s; }
-.animate-delay-2 { animation-delay: 0.16s; }
-.animate-delay-3 { animation-delay: 0.24s; }
-.animate-delay-4 { animation-delay: 0.32s; }
-.animate-delay-5 { animation-delay: 0.4s; }
+.animate-delay-1 {
+  animation-delay: 0.08s;
+}
+
+.animate-delay-2 {
+  animation-delay: 0.16s;
+}
+
+.animate-delay-3 {
+  animation-delay: 0.24s;
+}
+
+.animate-delay-4 {
+  animation-delay: 0.32s;
+}
+
+.animate-delay-5 {
+  animation-delay: 0.4s;
+}
 
 /* Skeleton Loading */
 .skeleton {
@@ -609,8 +635,13 @@ select.input-premium {
 
 /* Sync spinner animation */
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spin {
@@ -621,4 +652,46 @@ select.input-premium {
 ::selection {
   background: var(--accent-sage);
   color: white;
+}
+
+/* Privacy Mask Styling */
+.privacy-mask {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  /* Muted color for the mask chars */
+  opacity: 1;
+  /* Fully visible */
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+  vertical-align: middle;
+  transform: scale(1.05);
+  /* Slight scale for emphasis */
+  cursor: default;
+  padding: 0 0.2rem;
+  /* Removed filter: blur() completely */
+}
+
+.privacy-mask::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(255, 255, 255, 0.2),
+      transparent);
+  transform: skewX(-20deg) translateX(-150%);
+  animation: shimmer 2s infinite;
+}
+
+.privacy-mask:hover {
+  color: var(--text-primary);
+  /* No blur on hover either */
 }

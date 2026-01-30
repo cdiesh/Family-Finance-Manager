@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+const API_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:8000`;
 
 export interface User {
   id: number;
@@ -13,6 +13,33 @@ export interface Account {
   type: string;
   balance: number;
   institution_name: string;
+  item_id: number;
+  is_hidden?: boolean;
+}
+
+export interface Asset {
+  id: number;
+  name: string;
+  type: 'real_estate' | 'investment' | 'vehicle' | 'other';
+  value: number;
+  ownership_percentage: number;
+  linked_account_id?: number;
+  // Manual Mortgage
+  manual_mortgage_balance?: number;
+  interest_rate?: number;
+  monthly_payment?: number;
+  equity_value: number;
+  current_balance: number;
+}
+
+export interface Transaction {
+  id: number;
+  amount: number;
+  description: string;
+  category: string;
+  date: string;
+  is_tax_deductible: boolean;
+  account_id: number;
 }
 
 const getHeaders = () => {
@@ -27,6 +54,32 @@ export const api = {
   checkHealth: async () => {
     const response = await fetch(`${API_URL}/health`);
     if (!response.ok) throw new Error('Backend failed');
+    return response.json();
+  },
+
+  // Assets
+  getAssets: async (): Promise<Asset[]> => {
+    const response = await fetch(`${API_URL}/assets/`, { headers: getHeaders() });
+    if (!response.ok) throw new Error('Failed to fetch assets');
+    return response.json();
+  },
+
+  createAsset: async (asset: Partial<Asset>) => {
+    const response = await fetch(`${API_URL}/assets/`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(asset),
+    });
+    if (!response.ok) throw new Error('Failed to create asset');
+    return response.json();
+  },
+
+  deleteAsset: async (id: number) => {
+    const response = await fetch(`${API_URL}/assets/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to delete asset');
     return response.json();
   },
 
@@ -129,6 +182,15 @@ export const api = {
     return response.json();
   },
 
+  toggleAccountVisibility: async (accountId: number) => {
+    const response = await fetch(`${API_URL}/accounts/${accountId}/toggle_visibility`, {
+      method: 'PUT',
+      headers: getHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to toggle visibility');
+    return response.json();
+  },
+
   // Transactions
   getTransactions: async () => {
     const response = await fetch(`${API_URL}/transactions/`, { headers: getHeaders() });
@@ -142,6 +204,12 @@ export const api = {
       headers: getHeaders(),
     });
     if (!response.ok) throw new Error('Failed to sync transactions');
+    return response.json();
+  },
+
+  getHoldings: async (itemId: number) => {
+    const response = await fetch(`${API_URL}/plaid/holdings/${itemId}`, { headers: getHeaders() });
+    if (!response.ok) throw new Error('Failed to fetch holdings');
     return response.json();
   },
 
@@ -181,6 +249,43 @@ export const api = {
       body: JSON.stringify({ public_token: publicToken, institution_name: institutionName }),
     });
     if (!response.ok) throw new Error('Failed to exchange public token');
+    return response.json();
+  },
+
+  // Insights (New)
+  // Insights (New)
+  getInsights: async (timeRange: string = '365d', month?: number | null, year?: number | null) => {
+    let url = `${API_URL}/insights/spending?time_range=${timeRange}`;
+    if (month && year) {
+      url += `&month=${month}&year=${year}`;
+    }
+    const response = await fetch(url, { headers: getHeaders() });
+    if (!response.ok) throw new Error('Failed to fetch insights');
+    return response.json();
+  },
+
+  getInsightsTransactions: async (month?: number | null, year?: number | null) => {
+    let url = `${API_URL}/insights/transactions`;
+    const params = [];
+    if (month && year) {
+      params.push(`month=${month}`);
+      params.push(`year=${year}`);
+    }
+    if (params.length > 0) {
+      url += '?' + params.join('&');
+    }
+
+    const response = await fetch(url, { headers: getHeaders() });
+    if (!response.ok) throw new Error('Failed to fetch transactions');
+    return response.json();
+  },
+
+  runAutoCategorization: async () => {
+    const response = await fetch(`${API_URL}/insights/auto_categorize`, {
+      method: 'POST',
+      headers: getHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to run AI categorization');
     return response.json();
   }
 };

@@ -64,6 +64,7 @@ class Account(Base):
     plaid_account_id = Column(String) # The 'account_id' from Plaid
     item_id = Column(Integer, ForeignKey("plaid_items.id"))
     owner_id = Column(Integer, ForeignKey("users.id")) # Keep direct link for convenience
+    is_hidden = Column(Boolean, default=False) # For hiding commercial/unwanted accounts
 
     owner = relationship("User", back_populates="accounts")
     item = relationship("PlaidItem", back_populates="accounts")
@@ -78,6 +79,9 @@ class Transaction(Base):
     description = Column(String)
     category = Column(String) # e.g. "Groceries", "Utilities"
     is_tax_deductible = Column(Boolean, default=False) # For Accountant
+    is_fixed = Column(Boolean, default=False) # Fixed vs Variable expenses
+    is_recurring = Column(Boolean, default=False) # Detected pattern
+    tags = Column(String, nullable=True) # e.g. "Work, Family, Project-X"
     plaid_transaction_id = Column(String, unique=True, index=True)
     account_id = Column(Integer, ForeignKey("accounts.id"))
     
@@ -97,3 +101,36 @@ class Task(Base):
 
 # Update User to include tasks relationship
 User.tasks = relationship("Task", back_populates="owner")
+
+class Category(Base):
+    __tablename__ = "categories"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True)
+    type = Column(String) # "income" or "expense"
+
+class Asset(Base):
+    __tablename__ = "assets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    name = Column(String, index=True)
+    type = Column(String) # "real_estate", "investment", "vehicle", "other"
+    value = Column(Float, default=0.0)
+    ownership_percentage = Column(Float, default=100.0)
+    # Manual Mortgage Tracking
+    manual_mortgage_balance = Column(Float, default=0.0)
+    interest_rate = Column(Float, default=0.0) # Annual %
+    monthly_payment = Column(Float, default=0.0)
+    
+    # Amortization Logic
+    amortization_start_date = Column(DateTime, nullable=True)
+    original_principal = Column(Float, default=0.0)
+    term_months = Column(Integer, default=360)
+    
+    linked_account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True) # Linked Mortgage/Liability
+
+    owner = relationship("User", back_populates="assets")
+    linked_account = relationship("Account") # One-to-One link ideally
+
+User.assets = relationship("Asset", back_populates="owner")

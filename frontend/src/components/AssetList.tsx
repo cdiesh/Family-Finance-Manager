@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PrivacyMask } from './PrivacyMask';
 import { api, type Asset, type Account } from '../api';
 
 interface AssetListProps {
@@ -83,7 +84,7 @@ export const AssetList = ({ assets, plaidAssets, accounts, onAssetChange }: Asse
 
     const totalRealEstateEquity = realEstate.reduce((sum, a) => sum + a.equity_value, 0);
     const totalInvestments = plaidAssets.reduce((sum, a) => sum + a.balance, 0) +
-                            manualInvestments.reduce((sum, a) => sum + a.equity_value, 0);
+        manualInvestments.reduce((sum, a) => sum + a.equity_value, 0);
 
     return (
         <div className="glass-panel" style={{ padding: '2rem', position: 'relative' }}>
@@ -105,116 +106,124 @@ export const AssetList = ({ assets, plaidAssets, accounts, onAssetChange }: Asse
                 }}>
                     <div style={{
                         background: 'var(--bg-secondary)',
-                        padding: '2rem',
                         borderRadius: 'var(--radius-lg)',
                         width: '100%',
-                        maxWidth: '700px',
-                        maxHeight: '80vh',
-                        overflowY: 'auto',
+                        maxWidth: '800px',
+                        maxHeight: '85vh',
+                        display: 'flex',
+                        flexDirection: 'column',
                         border: '1px solid var(--border-subtle)',
-                        boxShadow: 'var(--shadow-lg)'
-                    }}>
+                        boxShadow: 'var(--shadow-lg)',
+                        overflow: 'hidden' // key for internal scrolling
+                    }} onClick={(e) => e.stopPropagation()}>
+                        {/* Header (Fixed) */}
                         <div style={{
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center',
-                            marginBottom: '1.5rem',
-                            paddingBottom: '1rem',
-                            borderBottom: '1px solid var(--border-subtle)'
+                            padding: '1.5rem 2rem',
+                            borderBottom: '1px solid var(--border-subtle)',
+                            background: 'var(--bg-secondary)'
                         }}>
-                            <h3>Investment Holdings</h3>
+                            <h3 style={{ margin: 0 }}>Investment Holdings</h3>
                             <button
                                 onClick={() => setHoldingsModalOpen(false)}
                                 className="btn-ghost"
-                                style={{ fontSize: '1.2rem', padding: '0.25rem 0.5rem' }}
+                                style={{ fontSize: '1.5rem', lineHeight: 1, padding: '0 0.5rem' }}
                             >
                                 ×
                             </button>
                         </div>
 
-                        {isLoadingHoldings && (
-                            <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '3rem',
-                                gap: '1rem'
-                            }}>
+                        {/* Scrollable Content */}
+                        <div style={{ padding: '0 2rem 2rem 2rem', overflowY: 'auto', flex: 1 }}>
+                            {isLoadingHoldings && (
                                 <div style={{
-                                    width: '24px',
-                                    height: '24px',
-                                    border: '2px solid var(--border-subtle)',
-                                    borderTopColor: 'var(--accent-gold)',
-                                    borderRadius: '50%',
-                                    animation: 'spin 1s linear infinite'
-                                }} />
-                                <span style={{ color: 'var(--text-muted)' }}>Loading positions...</span>
-                            </div>
-                        )}
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    padding: '3rem',
+                                    gap: '1rem'
+                                }}>
+                                    <div style={{
+                                        width: '24px',
+                                        height: '24px',
+                                        border: '2px solid var(--border-subtle)',
+                                        borderTopColor: 'var(--accent-gold)',
+                                        borderRadius: '50%',
+                                        animation: 'spin 1s linear infinite'
+                                    }} />
+                                    <span style={{ color: 'var(--text-muted)' }}>Loading positions...</span>
+                                </div>
+                            )}
 
-                        {holdingsError && (
-                            <div style={{
-                                padding: '1rem',
-                                background: 'var(--negative-muted)',
-                                borderRadius: 'var(--radius-md)',
-                                color: 'var(--negative)'
-                            }}>
-                                {holdingsError}
-                            </div>
-                        )}
+                            {holdingsError && (
+                                <div style={{
+                                    marginTop: '2rem',
+                                    padding: '1rem',
+                                    background: 'var(--negative-muted)',
+                                    borderRadius: 'var(--radius-md)',
+                                    color: 'var(--negative)'
+                                }}>
+                                    {holdingsError}
+                                </div>
+                            )}
 
-                        {!isLoadingHoldings && !holdingsError && currentHoldings.length === 0 && (
-                            <div style={{
-                                textAlign: 'center',
-                                padding: '3rem',
-                                color: 'var(--text-muted)'
-                            }}>
-                                No holdings data available
-                            </div>
-                        )}
+                            {!isLoadingHoldings && !holdingsError && currentHoldings.length === 0 && (
+                                <div style={{
+                                    textAlign: 'center',
+                                    padding: '3rem',
+                                    color: 'var(--text-muted)'
+                                }}>
+                                    No holdings data available
+                                </div>
+                            )}
 
-                        {!isLoadingHoldings && currentHoldings.length > 0 && (
-                            <div style={{ overflowX: 'auto' }}>
-                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                    <thead>
-                                        <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                                            <th style={{ padding: '0.75rem', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Symbol</th>
-                                            <th style={{ padding: '0.75rem', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Name</th>
-                                            <th style={{ padding: '0.75rem', textAlign: 'right', color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Shares</th>
-                                            <th style={{ padding: '0.75rem', textAlign: 'right', color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Price</th>
-                                            <th style={{ padding: '0.75rem', textAlign: 'right', color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Value</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {currentHoldings.map((h, i) => (
-                                            <tr key={h.security_id || i} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                                                <td style={{ padding: '0.75rem' }}>
-                                                    <span style={{
-                                                        fontFamily: 'var(--font-mono)',
-                                                        color: 'var(--accent-gold)',
-                                                        fontWeight: 600
-                                                    }}>
-                                                        {h.ticker || '—'}
-                                                    </span>
-                                                </td>
-                                                <td style={{ padding: '0.75rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                                                    {h.name}
-                                                </td>
-                                                <td style={{ padding: '0.75rem', textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
-                                                    {h.quantity?.toLocaleString()}
-                                                </td>
-                                                <td style={{ padding: '0.75rem', textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
-                                                    ${h.price?.toLocaleString()}
-                                                </td>
-                                                <td style={{ padding: '0.75rem', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--text-primary)' }}>
-                                                    ${h.value?.toLocaleString()}
-                                                </td>
+                            {!isLoadingHoldings && currentHoldings.length > 0 && (
+                                <div style={{ overflowX: 'auto', marginTop: '1rem' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                        <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-secondary)', zIndex: 1 }}>
+                                            <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                                                <th style={{ padding: '0.75rem', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Symbol</th>
+                                                <th style={{ padding: '0.75rem', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Name</th>
+                                                <th style={{ padding: '0.75rem', textAlign: 'right', color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Shares</th>
+                                                <th style={{ padding: '0.75rem', textAlign: 'right', color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Price</th>
+                                                <th style={{ padding: '0.75rem', textAlign: 'right', color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Value</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
+                                        </thead>
+                                        <tbody>
+                                            {currentHoldings.map((h, i) => (
+                                                <tr key={h.security_id || i} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                                                    <td style={{ padding: '0.75rem' }}>
+                                                        <span style={{
+                                                            fontFamily: 'var(--font-mono)',
+                                                            color: 'var(--accent-gold)',
+                                                            fontWeight: 600
+                                                        }}>
+                                                            {h.ticker || '—'}
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                                                        {h.name}
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem', textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
+                                                        {h.quantity?.toLocaleString()}
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem', textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
+                                                        ${h.price?.toLocaleString()}
+                                                    </td>
+                                                    <td style={{ padding: '0.75rem', textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--text-primary)' }}>
+                                                        <PrivacyMask>
+                                                            ${h.value?.toLocaleString()}
+                                                        </PrivacyMask>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
@@ -401,7 +410,9 @@ export const AssetList = ({ assets, plaidAssets, accounts, onAssetChange }: Asse
                                 fontWeight: 600,
                                 color: 'var(--positive)'
                             }}>
-                                ${totalRealEstateEquity.toLocaleString('en-US', { minimumFractionDigits: 0 })}
+                                <PrivacyMask>
+                                    ${totalRealEstateEquity.toLocaleString('en-US', { minimumFractionDigits: 0 })}
+                                </PrivacyMask>
                             </span>
                             <span style={{
                                 color: 'var(--text-muted)',
@@ -444,34 +455,53 @@ export const AssetList = ({ assets, plaidAssets, accounts, onAssetChange }: Asse
                                         }}>
                                             {asset.name}
                                         </div>
-                                        <div style={{ display: 'flex', gap: '2rem' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem' }}>
                                             <div>
                                                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
                                                     Market Value
                                                 </div>
-                                                <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
-                                                    ${asset.value.toLocaleString()}
+                                                <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
+                                                    <PrivacyMask>${asset.value.toLocaleString()}</PrivacyMask>
                                                 </div>
                                             </div>
                                             <div>
                                                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
-                                                    Ownership
+                                                    Mortgage
                                                 </div>
-                                                <div style={{ color: 'var(--text-secondary)' }}>
-                                                    {asset.ownership_percentage}%
+                                                <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
+                                                    <PrivacyMask>{asset.current_balance > 0 ? `-$${asset.current_balance.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : '—'}</PrivacyMask>
+                                                </div>
+                                                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                                                    {asset.linked_account_id ? (
+                                                        getLinkedName(asset.linked_account_id)
+                                                    ) : (asset.manual_mortgage_balance || 0) > 0 ? (
+                                                        'Manual'
+                                                    ) : asset.current_balance > 0 ? (
+                                                        'Amortized'
+                                                    ) : 'None'}
                                                 </div>
                                             </div>
-                                        </div>
-                                        <div style={{ marginTop: '0.75rem' }}>
-                                            <span className="badge badge-neutral" style={{ fontSize: '0.65rem' }}>
-                                                {asset.linked_account_id ? (
-                                                    <>Mortgage: {getLinkedName(asset.linked_account_id)}</>
-                                                ) : (asset.manual_mortgage_balance || 0) > 0 ? (
-                                                    <>Manual: ${(asset.manual_mortgage_balance || 0).toLocaleString()}</>
-                                                ) : (
-                                                    'No Mortgage'
-                                                )}
-                                            </span>
+                                            <div>
+                                                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                                                    Total Equity
+                                                </div>
+                                                <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--positive)', opacity: 0.8 }}>
+                                                    <PrivacyMask>${(asset.value - asset.current_balance).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</PrivacyMask>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                                                    My Equity ({asset.ownership_percentage}%)
+                                                </div>
+                                                <div style={{
+                                                    fontFamily: 'var(--font-display)',
+                                                    fontSize: '1.1rem',
+                                                    fontWeight: 600,
+                                                    color: 'var(--positive)'
+                                                }}>
+                                                    <PrivacyMask>${asset.equity_value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</PrivacyMask>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                     <div style={{
@@ -480,25 +510,12 @@ export const AssetList = ({ assets, plaidAssets, accounts, onAssetChange }: Asse
                                         borderLeft: '1px solid var(--border-subtle)',
                                         display: 'flex',
                                         flexDirection: 'column',
-                                        justifyContent: 'space-between'
+                                        justifyContent: 'center'
                                     }}>
-                                        <div>
-                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.25rem' }}>
-                                                Est. Equity
-                                            </div>
-                                            <div style={{
-                                                fontFamily: 'var(--font-display)',
-                                                fontSize: '1.5rem',
-                                                fontWeight: 600,
-                                                color: 'var(--positive)'
-                                            }}>
-                                                ${asset.equity_value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                            </div>
-                                        </div>
                                         <button
                                             onClick={() => handleDelete(asset.id)}
                                             className="btn-ghost"
-                                            style={{ fontSize: '0.7rem', color: 'var(--negative)', padding: '0.25rem 0.5rem', marginTop: '0.5rem' }}
+                                            style={{ fontSize: '0.7rem', color: 'var(--negative)', padding: '0.25rem 0.5rem' }}
                                         >
                                             Delete
                                         </button>
@@ -544,7 +561,7 @@ export const AssetList = ({ assets, plaidAssets, accounts, onAssetChange }: Asse
                                 fontWeight: 600,
                                 color: 'var(--info)'
                             }}>
-                                ${totalInvestments.toLocaleString('en-US', { minimumFractionDigits: 0 })}
+                                <PrivacyMask>${totalInvestments.toLocaleString('en-US', { minimumFractionDigits: 0 })}</PrivacyMask>
                             </span>
                             <span style={{
                                 color: 'var(--text-muted)',
@@ -612,7 +629,7 @@ export const AssetList = ({ assets, plaidAssets, accounts, onAssetChange }: Asse
                                             fontWeight: 500,
                                             color: 'var(--text-primary)'
                                         }}>
-                                            ${acc.balance.toLocaleString()}
+                                            <PrivacyMask>${acc.balance.toLocaleString()}</PrivacyMask>
                                         </span>
                                         {(acc.type === 'investment' || acc.institution_name.toLowerCase().includes('vanguard')) && (
                                             <button
@@ -682,7 +699,7 @@ export const AssetList = ({ assets, plaidAssets, accounts, onAssetChange }: Asse
                                             fontWeight: 500,
                                             color: 'var(--text-primary)'
                                         }}>
-                                            ${asset.equity_value.toLocaleString()}
+                                            <PrivacyMask>${asset.equity_value.toLocaleString()}</PrivacyMask>
                                         </span>
                                         <button
                                             onClick={() => handleDelete(asset.id)}

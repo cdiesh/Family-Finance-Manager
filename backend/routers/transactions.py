@@ -23,6 +23,9 @@ def read_transactions(
         query = query.filter(models.User.household_id == current_user.household_id)
     else:
         query = query.filter(models.Account.owner_id == current_user.id)
+
+    # Filter out hidden accounts
+    query = query.filter(models.Account.is_hidden == False)
         
     return query.order_by(desc(models.Transaction.date))\
              .offset(skip)\

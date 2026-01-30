@@ -17,6 +17,9 @@ class TransactionBase(BaseModel):
     category: str | None = None
     date: datetime
     is_tax_deductible: bool = False
+    is_fixed: bool = False
+    is_recurring: bool = False
+    tags: str | None = None
     plaid_transaction_id: str
 
 class TransactionCreate(TransactionBase):
@@ -34,12 +37,14 @@ class AccountBase(BaseModel):
     type: AccountType
     balance: float
     institution_name: str
+    is_hidden: bool = False
 
 class AccountCreate(AccountBase):
     plaid_account_id: str
 
 class Account(AccountBase):
     id: int
+    item_id: int
     owner_id: int
     transactions: List[Transaction] = []
 

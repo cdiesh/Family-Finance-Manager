@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { usePrivacy } from '../context/PrivacyContext';
+import { PrivacyMask } from './PrivacyMask';
 import { api, type User, type Account, type Transaction, type Asset } from '../api';
 import { LinkButton } from './LinkButton';
 import { Login } from './Login';
@@ -8,7 +10,7 @@ import { AssetList } from './AssetList';
 import { TransactionGrid } from './TransactionGrid';
 import { AccountDetail } from './AccountDetail';
 
-export const Dashboard = () => {
+export const Dashboard = ({ onNavigateToInsights }: { onNavigateToInsights: () => void }) => {
     const [status, setStatus] = useState<string>('Connecting...');
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [accounts, setAccounts] = useState<Account[]>([]);
@@ -17,6 +19,7 @@ export const Dashboard = () => {
     const [checkingAuth, setCheckingAuth] = useState(true);
     const [isSyncing, setIsSyncing] = useState(false);
     const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+    const { isPrivacyMode, togglePrivacy } = usePrivacy();
 
     const loadUser = async () => {
         try {
@@ -116,16 +119,20 @@ export const Dashboard = () => {
     if (!currentUser) return <Login onLogin={() => window.location.reload()} />;
 
     // Calculate Net Worth
-    const netWorth = accounts.reduce((sum, acc) => {
-        const isLiability = ['credit', 'loan', 'mortgage'].includes(acc.type);
-        return sum + (isLiability ? -acc.balance : acc.balance);
-    }, 0) + assets.reduce((sum, asset) => sum + asset.equity_value, 0);
+    // Calculate Net Worth
+    const linkedAccountIds = new Set(assets.map(a => a.linked_account_id).filter(Boolean) as number[]);
 
-    const totalAssets = accounts.filter(a => !['credit', 'loan', 'mortgage'].includes(a.type))
-        .reduce((sum, a) => sum + a.balance, 0) + assets.reduce((sum, a) => sum + a.value, 0);
+    const totalAssets = accounts
+        .filter(a => !['credit', 'loan', 'mortgage'].includes(a.type) && !linkedAccountIds.has(a.id))
+        .reduce((sum, a) => sum + a.balance, 0)
+        + assets.reduce((sum, a) => sum + (a.value * (a.ownership_percentage / 100)), 0);
 
-    const totalLiabilities = accounts.filter(a => ['credit', 'loan', 'mortgage'].includes(a.type))
-        .reduce((sum, a) => sum + Math.abs(a.balance), 0);
+    const totalLiabilities = accounts
+        .filter(a => ['credit', 'loan', 'mortgage'].includes(a.type) && !linkedAccountIds.has(a.id))
+        .reduce((sum, a) => sum + Math.abs(a.balance), 0)
+        + assets.reduce((sum, a) => sum + (a.current_balance * (a.ownership_percentage / 100)), 0);
+
+    const netWorth = totalAssets - totalLiabilities;
 
     const linkedInstitutions = [...new Set(accounts.map(a => a.institution_name))].length;
 
@@ -151,7 +158,32 @@ export const Dashboard = () => {
             >
                 <div>
                     <h3 style={{ marginBottom: '0.5rem' }}>Family Wealth</h3>
-                    <h1>Financial Overview</h1>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <h1>Financial Overview</h1>
+                        <button
+                            onClick={onNavigateToInsights}
+                            className="btn-ghost"
+                        >
+                            View Insights →
+                        </button>
+                        <button
+                            onClick={() => {
+                                if (isPrivacyMode) {
+                                    const pin = prompt("Enter Privacy PIN:");
+                                    if (pin) {
+                                        if (!togglePrivacy(pin)) alert("Incorrect PIN");
+                                    }
+                                } else {
+                                    togglePrivacy();
+                                }
+                            }}
+                            className="btn-ghost"
+                            style={{ marginLeft: '0.5rem', fontSize: '1.2rem' }}
+                            title={isPrivacyMode ? "Unlock to see values" : "Lock values"}
+                        >
+                            {isPrivacyMode ? "🔒" : "🔓"}
+                        </button>
+                    </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                     <div style={{
@@ -197,7 +229,7 @@ export const Dashboard = () => {
                         </button>
                     </div>
                 </div>
-            </header>
+            </header >
 
             {/* Metrics Grid */}
             <div style={{
@@ -214,7 +246,9 @@ export const Dashboard = () => {
                     <div style={{ position: 'relative', zIndex: 1 }}>
                         <h3 style={{ marginBottom: '1rem' }}>Net Worth</h3>
                         <div className="big-number gold">
-                            ${netWorth.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            <PrivacyMask>
+                                ${netWorth.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            </PrivacyMask>
                         </div>
                         <div style={{
                             display: 'flex',
@@ -226,21 +260,25 @@ export const Dashboard = () => {
                             <div>
                                 <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Assets</p>
                                 <p className="mono-value" style={{ color: 'var(--positive)', fontSize: '1.1rem' }}>
-                                    ${totalAssets.toLocaleString('en-US', { minimumFractionDigits: 0 })}
+                                    <PrivacyMask>
+                                        ${totalAssets.toLocaleString('en-US', { minimumFractionDigits: 0 })}
+                                    </PrivacyMask>
                                 </p>
                             </div>
                             <div>
                                 <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Liabilities</p>
                                 <p className="mono-value" style={{ color: 'var(--negative)', fontSize: '1.1rem' }}>
-                                    ${totalLiabilities.toLocaleString('en-US', { minimumFractionDigits: 0 })}
+                                    <PrivacyMask>
+                                        ${totalLiabilities.toLocaleString('en-US', { minimumFractionDigits: 0 })}
+                                    </PrivacyMask>
                                 </p>
                             </div>
                         </div>
                     </div>
-                </div>
+                </div >
 
                 {/* Cash Flow Card */}
-                <div
+                < div
                     className="metric-card animate-fade-in animate-delay-2"
                     style={{ gridColumn: 'span 4', padding: '2.5rem' }}
                 >
@@ -268,10 +306,10 @@ export const Dashboard = () => {
                             </div>
                         </div>
                     </div>
-                </div>
+                </div >
 
                 {/* Connections Card */}
-                <div
+                < div
                     className="metric-card animate-fade-in animate-delay-3"
                     style={{
                         gridColumn: 'span 3',
@@ -294,47 +332,49 @@ export const Dashboard = () => {
                         </p>
                         <LinkButton />
                     </div>
-                </div>
-            </div>
+                </div >
+            </div >
 
             {/* Main Content Grid */}
-            <div style={{
+            < div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(12, 1fr)',
                 gap: '1.5rem'
             }}>
                 {/* Accounts Section */}
-                <div className="animate-fade-in animate-delay-4" style={{ gridColumn: 'span 12' }}>
+                < div className="animate-fade-in animate-delay-4" style={{ gridColumn: 'span 12' }}>
                     <AccountList
                         accounts={accounts}
                         onAccountClick={setSelectedAccount}
                     />
-                </div>
+                </div >
 
                 {/* Assets Section */}
-                <div className="animate-fade-in animate-delay-5" style={{ gridColumn: 'span 12' }}>
+                < div className="animate-fade-in animate-delay-5" style={{ gridColumn: 'span 12' }}>
                     <AssetList
                         assets={assets}
                         plaidAssets={accounts.filter(a => ['investment', 'brokerage', 'other'].includes(a.type))}
                         accounts={accounts}
                         onAssetChange={loadUser}
                     />
-                </div>
+                </div >
 
                 {/* Tasks Section */}
-                <div className="animate-fade-in" style={{ gridColumn: 'span 12', animationDelay: '0.6s' }}>
+                < div className="animate-fade-in" style={{ gridColumn: 'span 12', animationDelay: '0.6s' }}>
                     <TaskList />
-                </div>
-            </div>
+                </div >
+            </div >
 
             {/* Account Detail Modal */}
-            {selectedAccount && (
-                <AccountDetail
-                    account={selectedAccount}
-                    transactions={transactions.filter(t => t.account_id === selectedAccount.id)}
-                    onClose={() => setSelectedAccount(null)}
-                />
-            )}
-        </div>
+            {
+                selectedAccount && (
+                    <AccountDetail
+                        account={selectedAccount}
+                        transactions={transactions.filter(t => t.account_id === selectedAccount.id)}
+                        onClose={() => setSelectedAccount(null)}
+                    />
+                )
+            }
+        </div >
     );
 };

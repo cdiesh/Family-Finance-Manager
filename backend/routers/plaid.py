@@ -27,6 +27,7 @@ def create_link_token(current_user: models.User = Depends(get_current_active_use
     # Sandbox requires fewer products to start simple
     request = LinkTokenCreateRequest(
         products=[Products("transactions")],
+        required_if_supported_products=[Products("investments"), Products("liabilities")],
         client_name="Family Finance Manager",
         country_codes=[CountryCode("US")],
         language="en",
@@ -78,10 +79,45 @@ def sync_accounts_for_user(
             
             # 3. Upsert to DB
             for acc in response['accounts']:
+                # Map Plaid type/subtype to internal AccountType
+                p_type = acc.get('type', '')
+                p_subtype = acc.get('subtype', '')
+                
+                # Enhanced Mapping Logic
+                account_type = "checking" # Default
+
+                # 1. Trust Plaid's high-level type first
+                if p_type == 'investment':
+                    account_type = 'investment'
+                elif p_type == 'loan':
+                    if p_subtype == 'mortgage':
+                        account_type = 'mortgage'
+                    else:
+                        account_type = 'loan'
+                elif p_type == 'credit':
+                    account_type = 'credit_card'
+                elif p_type == 'depository':
+                    if p_subtype == 'savings':
+                        account_type = 'savings'
+                    else:
+                        account_type = 'checking'
+                
+                # 2. Heuristic Override based on Name (Fixes "Visa Signature" as checking)
+                name_lower = acc['name'].lower()
+                if "visa" in name_lower or "card" in name_lower or "mastercard" in name_lower:
+                    if account_type == 'checking': # Only override if it defaulted to checking
+                        account_type = 'credit_card'
+                elif "savings" in name_lower:
+                    account_type = 'savings'
+                elif any(x in name_lower for x in ['ira', 'brokerage', 'investment', '401k', 'vanguard', 'fidelity', 'schwab']):
+                    account_type = 'investment'
+                elif "mtg" in name_lower or "mortgage" in name_lower:
+                    account_type = 'mortgage'
+                
                 account_schema = schemas.AccountCreate(
                     name=acc['name'],
-                    type=acc['type'], # Map this? For now passing string
-                    balance=acc['balances']['current'],
+                    type=account_type,
+                    balance=acc['balances']['current'] or 0.0,
                     institution_name=item.institution_name or "Bank",
                     plaid_account_id=acc['account_id']
                 )
@@ -99,11 +135,14 @@ def sync_transactions_for_user(
     # 1. Get items
     items = db.query(models.PlaidItem).filter(models.PlaidItem.user_id == current_user.id).all()
     
+    # 2. Get all categories for matching
+    all_categories = db.query(models.Category).all()
+    
     from datetime import datetime, timedelta
     from plaid.model.transactions_get_request import TransactionsGetRequest
     from plaid.model.transactions_get_request_options import TransactionsGetRequestOptions
 
-    start_date = (datetime.now() - timedelta(days=30)).date()
+    start_date = (datetime.now() - timedelta(days=730)).date()
     end_date = datetime.now().date()
     
     synced_count = 0
@@ -129,11 +168,27 @@ def sync_transactions_for_user(
                 if tx['account_id'] in acct_map:
                     local_account_id = acct_map[tx['account_id']]
                     
+                    # --- AUTO-TAGGING LOGIC ---
+                    assigned_category = "Uncategorized"
+                    
+                    # 1. Check if we can find a matching category by name match
+                    # e.g. "Webster Mortgage" in "Webster Mortgage Payment"
+                    tx_name = tx['name'].lower()
+                    
+                    for cat in all_categories:
+                        if cat.name.lower() in tx_name:
+                            assigned_category = cat.name
+                            break
+                            
+                    # 2. Fallback to Plaid category if no match? 
+                    # For now, let's stick to our strict Excel categories or "Uncategorized"
+                    # so the user knows what needs attention.
+                    
                     tx_schema = schemas.TransactionCreate(
                         amount=tx['amount'],
                         description=tx['name'],
                         date=tx['date'],
-                        category=tx['category'][0] if tx['category'] else "Uncategorized",
+                        category=assigned_category,
                         plaid_transaction_id=tx['transaction_id']
                     )
                     
@@ -144,3 +199,44 @@ def sync_transactions_for_user(
             print(f"Error syncing transactions for item {item.id}: {e}")
 
     return {"status": "success", "synced": synced_count}
+
+@router.get("/holdings/{item_id}")
+def get_investment_holdings(
+    item_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_active_user)
+):
+    # 1. Get the item and verify ownership
+    item = db.query(models.PlaidItem).filter(models.PlaidItem.id == item_id, models.PlaidItem.user_id == current_user.id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    from plaid.model.investments_holdings_get_request import InvestmentsHoldingsGetRequest
+    # from plaid.model.investments_holdings_get_request_options import InvestmentsHoldingsGetRequestOptions
+
+    try:
+        request = InvestmentsHoldingsGetRequest(
+            access_token=item.access_token
+        )
+        response = client.investments_holdings_get(request)
+        
+        # Simplify response for frontend
+        holdings = []
+        for h in response['holdings']:
+            security = next((s for s in response['securities'] if s['security_id'] == h['security_id']), None)
+            holdings.append({
+                "account_id": h['account_id'],
+                "security_id": h['security_id'],
+                "quantity": h['quantity'],
+                "price": h['institution_price'],
+                "value": h['institution_value'],
+                "ticker": security['ticker_symbol'] if security else "Unknown",
+                "name": security['name'] if security else "Unknown Security"
+            })
+            
+            
+        return {"holdings": holdings}
+        
+    except plaid.ApiException as e:
+        print(f"Error fetching holdings for item {item.id}: {e}")
+        raise HTTPException(status_code=400, detail="Failed to fetch holdings from Plaid")
