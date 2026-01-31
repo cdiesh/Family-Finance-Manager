@@ -10,6 +10,9 @@ import { AssetList } from './AssetList';
 import { TransactionGrid } from './TransactionGrid';
 import { AccountDetail } from './AccountDetail';
 
+import benFranklinWink from '../assets/ben_franklin_wink_final.png';
+import benFranklinNormal from '../assets/ben_franklin_normal_final.png';
+
 export const Dashboard = ({ onNavigateToInsights }: { onNavigateToInsights: () => void }) => {
     const [status, setStatus] = useState<string>('Connecting...');
     const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -20,6 +23,7 @@ export const Dashboard = ({ onNavigateToInsights }: { onNavigateToInsights: () =
     const [isSyncing, setIsSyncing] = useState(false);
     const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
     const { isPrivacyMode, togglePrivacy } = usePrivacy();
+    const [isHoveringBen, setIsHoveringBen] = useState(false);
 
     const loadUser = async () => {
         try {
@@ -119,7 +123,6 @@ export const Dashboard = ({ onNavigateToInsights }: { onNavigateToInsights: () =
     if (!currentUser) return <Login onLogin={() => window.location.reload()} />;
 
     // Calculate Net Worth
-    // Calculate Net Worth
     const linkedAccountIds = new Set(assets.map(a => a.linked_account_id).filter(Boolean) as number[]);
 
     const totalAssets = accounts
@@ -150,39 +153,67 @@ export const Dashboard = ({ onNavigateToInsights }: { onNavigateToInsights: () =
                 style={{
                     display: 'flex',
                     justifyContent: 'space-between',
-                    alignItems: 'flex-start',
+                    alignItems: 'center',
                     marginBottom: '3rem',
                     paddingBottom: '2rem',
                     borderBottom: '1px solid var(--border-subtle)'
                 }}
             >
-                <div>
-                    <h3 style={{ marginBottom: '0.5rem' }}>Family Wealth</h3>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <h1>Financial Overview</h1>
-                        <button
-                            onClick={onNavigateToInsights}
-                            className="btn-ghost"
-                        >
-                            View Insights →
-                        </button>
-                        <button
-                            onClick={() => {
-                                if (isPrivacyMode) {
-                                    const pin = prompt("Enter Privacy PIN:");
-                                    if (pin) {
-                                        if (!togglePrivacy(pin)) alert("Incorrect PIN");
-                                    }
-                                } else {
-                                    togglePrivacy();
-                                }
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                    <div
+                        onMouseEnter={() => setIsHoveringBen(true)}
+                        onMouseLeave={() => setIsHoveringBen(false)}
+                        style={{
+                            width: '240px',
+                            height: '240px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            position: 'relative',
+                            cursor: 'pointer',
+                            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.2))',
+                            transition: 'transform 0.2s ease'
+                        }}
+                    >
+                        <img
+                            src={isHoveringBen ? benFranklinWink : benFranklinNormal}
+                            alt="Ben Franklin"
+                            style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'contain',
+                                transition: 'opacity 0.2s ease'
                             }}
-                            className="btn-ghost"
-                            style={{ marginLeft: '0.5rem', fontSize: '1.2rem' }}
-                            title={isPrivacyMode ? "Unlock to see values" : "Lock values"}
-                        >
-                            {isPrivacyMode ? "🔒" : "🔓"}
-                        </button>
+                        />
+                    </div>
+                    <div>
+                        <h3 style={{ marginBottom: '0.25rem' }}>Family Wealth</h3>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <h1>Financial Overview</h1>
+                            <button
+                                onClick={onNavigateToInsights}
+                                className="btn-ghost"
+                            >
+                                View Insights →
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (isPrivacyMode) {
+                                        const pin = prompt("Enter Privacy PIN:");
+                                        if (pin) {
+                                            if (!togglePrivacy(pin)) alert("Incorrect PIN");
+                                        }
+                                    } else {
+                                        togglePrivacy();
+                                    }
+                                }}
+                                className="btn-ghost"
+                                style={{ marginLeft: '0.5rem', fontSize: '1.2rem' }}
+                                title={isPrivacyMode ? "Unlock to see values" : "Lock values"}
+                            >
+                                {isPrivacyMode ? "🔒" : "🔓"}
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>

@@ -51,12 +51,17 @@ $remotes = git remote
 if ($remotes -contains "template") {
     Write-Host "Pushing to 'template' remote..."
     git push template public-release:main
-} else {
+}
+else {
     Write-Host "Warning: 'template' remote not found. Skipping push." -ForegroundColor Yellow
     Write-Host "Run: git remote add template <URL>"
 }
 
 # 8. Return to main
 git checkout main
+
+# 9. Push Private to Origin
+Write-Host "Pushing private changes to origin..."
+git push origin main
 
 Write-Host "Sync Complete! You are back on 'main'." -ForegroundColor Green
