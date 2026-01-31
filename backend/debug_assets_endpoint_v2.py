@@ -1,11 +1,12 @@
 from database import SessionLocal
 import models
 from routers.assets import AssetRead
+import os
 
 def debug_assets():
     db = SessionLocal()
     try:
-        user = db.query(models.User).filter(models.User.email == "christopherdiesh@gmail.com").first()
+        user = db.query(models.User).filter(models.User.email == os.getenv("PRIMARY_EMAIL", "admin@example.com")).first()
         if not user:
             print("User not found via specific email")
             user = db.query(models.User).first()

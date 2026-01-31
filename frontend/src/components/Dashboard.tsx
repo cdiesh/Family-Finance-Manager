@@ -53,6 +53,7 @@ export const Dashboard = ({ onNavigateToInsights }: { onNavigateToInsights: () =
                 const health = await api.checkHealth();
                 setStatus(health.status);
                 await loadUser();
+                setCheckingAuth(false);
 
                 if (!window.location.hash.includes('nosync')) {
                     setIsSyncing(true);
@@ -68,7 +69,6 @@ export const Dashboard = ({ onNavigateToInsights }: { onNavigateToInsights: () =
             } catch (e) {
                 setStatus('Error connecting to Backend');
                 setIsSyncing(false);
-            } finally {
                 setCheckingAuth(false);
             }
         };

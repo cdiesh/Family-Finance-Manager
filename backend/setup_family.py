@@ -2,13 +2,14 @@ from sqlalchemy.orm import Session
 from database import SessionLocal
 import models
 from core.security import get_password_hash
+import os
 
 def setup_family():
     db = SessionLocal()
     try:
         # 1. Identify "Husband/Primary" User
         # We assume the first user (or the one with christopherdiesh email) is the primary
-        primary_email = "christopherdiesh@gmail.com"
+        primary_email = os.getenv("PRIMARY_EMAIL", "admin@example.com")
         primary_user = db.query(models.User).filter(models.User.email == primary_email).first()
         
         if not primary_user:
@@ -36,7 +37,7 @@ def setup_family():
             print(f"Existing Household found: {household.name}")
 
         # 3. Create/Link Wife User
-        wife_email = "jennifer.diesh@example.com" # Placeholder, user likely wants to set this
+        wife_email = os.getenv("SPOUSE_EMAIL", "spouse@example.com")
         # Or better -> ask user? For now I will hardcode the logic for "Spouse" and let user edit later or input via CLI
         
         # Let's prompt or just wait? User asked "how can my wife add her wells account"

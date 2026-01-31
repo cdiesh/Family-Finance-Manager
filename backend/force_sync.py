@@ -6,11 +6,12 @@ import schemas
 from plaid_client import client
 from plaid.model.accounts_balance_get_request import AccountsBalanceGetRequest
 import plaid
+import os
 
 def force_sync():
     db = SessionLocal()
     try:
-        user = db.query(models.User).filter(models.User.email == "christopherdiesh@gmail.com").first()
+        user = db.query(models.User).filter(models.User.email == os.getenv("PRIMARY_EMAIL", "admin@example.com")).first()
         items = db.query(models.PlaidItem).filter(models.PlaidItem.user_id == user.id).all()
         
         print(f"Syncing {len(items)} items for user {user.email}")

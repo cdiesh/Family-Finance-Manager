@@ -1,10 +1,11 @@
 from database import SessionLocal
 import models
+import os
 
 def update_webster():
     db = SessionLocal()
     try:
-        user = db.query(models.User).filter(models.User.email == "christopherdiesh@gmail.com").first()
+        user = db.query(models.User).filter(models.User.email == os.getenv("PRIMARY_EMAIL", "admin@example.com")).first()
         if not user:
             user = db.query(models.User).first()
         
